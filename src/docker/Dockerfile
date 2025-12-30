@@ -23,6 +23,8 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     librdkafka-dev \
     libpq-dev \
+    libgmp-dev \
+    libmagickwand-dev \
     openssh-server \
     zip \
     unzip \
@@ -31,9 +33,6 @@ RUN apt-get update && apt-get install -y \
     nano \
     cron
 
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION} | bash -
- # Install Node    
-RUN apt-get install -y nodejs     
 # Install nginx 
 RUN apt-get update && apt-get install -y nginx
 
