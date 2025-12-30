@@ -39,42 +39,35 @@ RUN apt-get update && apt-get install -y nginx
 
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
-# Install Kafka 
-RUN git clone https://github.com/arnaud-lb/php-rdkafka.git\
-    && cd php-rdkafka \
-    && phpize \
-    && ./configure \
-    && make all -j 5 \
-    && make install 
 
-# Install Rdkafka and enable it
-RUN docker-php-ext-enable rdkafka \
-     && cd .. \
-    && rm -rf /php-rdkafka
+RUN docker-php-ext-install mysqli \
+        && docker-php-ext-install pdo_mysql \
+        && docker-php-ext-install zip
 
-# Install PHP extensions zip, mbstring, exif, bcmath, intl
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
-RUN docker-php-ext-install  zip mbstring exif pcntl bcmath -j$(nproc) gd intl
+# XenForo2 required extension GMP
+RUN docker-php-ext-configure gmp && docker-php-ext-install gmp
 
-# Install Redis and enable it
-RUN pecl install redis  && docker-php-ext-enable redis
+# PHP 8 does not include pecl so switch to new module manager pickle
+RUN curl -L --output /tmp/pickle.phar https://github.com/FriendsOfPHP/pickle/releases/download/v0.7.11/pickle.phar \
+    && mv /tmp/pickle.phar /usr/local/bin/pickle \
+    && chmod +x /usr/local/bin/pickle
 
+# PHP 8 does not include pecl so switch to new module manager pickle
+RUN curl -L --output /tmp/pickle.phar https://github.com/FriendsOfPHP/pickle/releases/download/v0.7.11/pickle.phar \
+    && mv /tmp/pickle.phar /usr/local/bin/pickle \
+    && chmod +x /usr/local/bin/pickle
 
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j "$(nproc)" gd
 
-# Install the php memcached extension
-RUN pecl install memcached && docker-php-ext-enable memcached
+RUN pickle install imagick && docker-php-ext-enable imagick
+RUN pickle install redis && docker-php-ext-enable redis
 
-# Install the PHP pdo_mysql extention
-RUN docker-php-ext-install pdo_mysql
-
-# Install the PHP pdo_pgsql extention
-RUN docker-php-ext-install pdo_pgsql
-
-# Install PHP Opcache extention
-RUN docker-php-ext-install opcache
-
-# Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# Set PHP configuration for upload limits
+RUN echo "upload_max_filesize = 8M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size = 8M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "max_input_time = 300" >> /usr/local/etc/php/conf.d/uploads.ini
 
 # Set working directory
 WORKDIR $WORKDIR
